@@ -5,15 +5,28 @@ from pygame_tools import *
 class Body:
     MAX_TAIL_LENGTH = 100
 
-    def __init__(self, size: Coord):
-        self.mass = random.random() * 10
-        self.pos = Coord(random.random() * size.x, random.random() * size.y)
-        self.vel = Coord.from_polar(random.random() * 5, random.random() * math.pi * 2)
+    def __init__(self, mass: float, pos: Coord = None, vel: Coord = None):
+        self.mass = mass
+        if pos is None:
+            pos = Coord()
+        self.pos = pos
+        if vel is None:
+            vel = Coord()
+        self.vel = vel
         self.dead = False
         self.tail = []
 
+    @staticmethod
+    def random(size: Coord) -> 'Body':
+        return Body(
+                random.random() * 10,
+                Coord(random.random() * size.x, random.random() * size.y),
+                Coord.from_polar(random.random() * 5, random.random() * math.pi * 2),
+                )
+
     def update(self, bodies: ['Body', ...], size: Coord):
-        G = 6.67 * 10 ** -11 # gravitational contant
+        # G = 6.67 * 10 ** -11 # gravitational contant
+        G = 0.1
         prev = tuple(self.pos)
         self.pos += self.vel
         self.tail.append((prev, tuple(self.pos)))
@@ -33,14 +46,14 @@ class Body:
                 continue
             # TODO: do mass calculations
             dpos = body.pos - self.pos
-            a += body.mass * ((1 / dpos) ** 3) * dpos
-            # COLISIONS
+            a += self.mass * body.mass / (dpos.r ** 2) * dpos
+            # # COLISIONS
             # if self.collides_with(body):
             #     if self.mass > body.mass:
             #         self.absorb(body)
             #     else:
             #         body.absorb(self)
-        self.vel += a * 10
+        self.vel += G / self.mass * a
 
 
     def absorb(self, body: 'Body'):
@@ -64,8 +77,8 @@ class NBodySim(GameScreen):
     def __init__(self):
         pygame.init()
         size = Point(800, 600)
-        self.bodies = [Body(size) for _ in range(50)]
         super().__init__(pygame.display.set_mode(size), size)
+        self.bodies = [Body.random(size) for _ in range(50)]
         self.run()
 
     def update(self):
